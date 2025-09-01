@@ -1,7 +1,6 @@
 import os
-# from config import char_limit
 
-char_limit = 10000
+MAX_CHARS = 10000
 
 def get_file_content(working_directory, file_path):
     try:
@@ -14,7 +13,7 @@ def get_file_content(working_directory, file_path):
         file_obj = open(file_abspath, "r")
         file_str = file_obj.read()
         if len(file_str):
-            return f'{file_str[:char_limit]}[...File "{file_path}" truncated at {char_limit} characters]'
+            return f'{file_str[:MAX_CHARS]}[...File "{file_path}" truncated at {MAX_CHARS} characters]'
         return file_str
     except Exception as e:
         print(f"Error: {e}")
