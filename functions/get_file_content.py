@@ -2,6 +2,20 @@ import os
 
 MAX_CHARS = 10000
 
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Returns the content of the specified file as a string, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "working_directory": types.Schema(
+                type=types.Type.STRING,
+                description="The working directory itself",
+            ),
+        },
+    ),
+)
+
 def get_file_content(working_directory, file_path):
     try:
         workdir_abspath = os.path.abspath(working_directory)
