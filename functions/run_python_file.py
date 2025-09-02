@@ -17,7 +17,8 @@ schema_run_python_file = types.FunctionDeclaration(
                 description="A string that specifies the location of a file or directory"
             ),
             "args": types.Schema(
-                type=types.Type.list.string,
+                type=types.Type.ARRAY,
+                items=types.Schema(type=types.Type.STRING),
                 description="A list of strings - these will be the arguments (argv) for the file being ran"
             )
         },
@@ -37,7 +38,7 @@ def run_python_file(working_directory, file_path, args=[]):
         result = subprocess.run(["python3", file_abspath] + args, capture_output=True, text=True,  timeout=30)
         if result.stdout:
             return f"STDOUT: {result.stdout}"
-        if result.returncode is not 0:
+        if result.returncode != 0:
             return f"STDOUT: {result.stdout} \n Process exited with code {result.returncode}"
         if not result.stdout:
             return "No Output Produced"
