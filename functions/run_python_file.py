@@ -25,7 +25,9 @@ schema_run_python_file = types.FunctionDeclaration(
     ),
 )
 
-def run_python_file(working_directory, file_path, args=[]):
+# python
+def run_python_file(working_directory, file_path, args=None):
+    args = args or []
     try:
         file_abspath = os.path.abspath(os.path.join(working_directory, file_path))
         if not file_abspath.startswith(os.path.abspath(working_directory)):
@@ -34,13 +36,48 @@ def run_python_file(working_directory, file_path, args=[]):
             return f'Error: File "{file_path}" not found.'
         if not file_abspath.endswith(".py"):
             return f'Error: "{file_path}" is not a Python file.'
-        run_command = ["python3", file_abspath]
-        result = subprocess.run(["python3", file_abspath] + args, capture_output=True, text=True,  timeout=30)
-        if result.stdout:
-            return f"STDOUT: {result.stdout}"
+
+        # Run with cwd so relative behavior matches manual run
+        result = subprocess.run(
+            ["python3", file_abspath] + args,
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        # Combine outputs; some runners print on stderr
+        output = (result.stdout or "") + (result.stderr or "")
+        if output.strip():
+            return output
         if result.returncode != 0:
-            return f"STDOUT: {result.stdout} \n Process exited with code {result.returncode}"
-        if not result.stdout:
-            return "No Output Produced"
+            return f"Process exited with code {result.returncode}"
+        return "No Output Produced"
+
     except Exception as e:
-        print(f"Error: {e}")
+        return f"Error: {e}"
+
+# def run_python_file(working_directory, file_path, args=[]):
+#     try:
+#         file_abspath = os.path.abspath(os.path.join(working_directory, file_path))
+#         print(file_abspath)
+#         if not file_abspath.startswith(os.path.abspath(working_directory)):
+#             return f'Error: Cannot execute "{file_path}" as it is outside the permitted working directory'
+#         if not os.path.exists(file_abspath):
+#             return f'Error: File "{file_path}" not found.'
+#         if not file_abspath.endswith(".py"):
+#             return f'Error: "{file_path}" is not a Python file.'
+#         result = subprocess.run(
+#             ["python3", file_abspath] + args, 
+#             cwd=working_directory,
+#             capture_output=True, 
+#             text=True,  
+#             timeout=30)
+#         if result.stdout:
+#             return f"STDOUT: {result.stdout}"
+#         if result.returncode != 0:
+#             return f"STDOUT: {result.stdout} \n Process exited with code {result.returncode}"
+#         if not result.stdout:
+#             return "No Output Produced"
+#     except Exception as e:
+#         print(f"Error: {e}")

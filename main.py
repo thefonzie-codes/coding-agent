@@ -3,10 +3,11 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from functions.get_files_info import get_files_info, schema_get_files_info
-from functions.get_file_content import get_file_content, schema_get_file_content
+from functions.get_files_info import schema_get_files_info
+from functions.get_file_content import schema_get_file_content
 from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
+from functions.call_function import call_function
 
 def call_api(prompt):
     
@@ -29,8 +30,8 @@ def call_api(prompt):
         schema_get_file_content,
         schema_run_python_file,
         schema_write_file
-    ]
-)   
+        ]
+    )   
     try:
         load_dotenv()
         messages = [
@@ -47,29 +48,41 @@ def call_api(prompt):
                 ),
         )
         return res
+    
     except Exception as e:
         print(f"Error during the API call: {e}")
     
 def main():
+    
     if not sys.argv[1]:
         sys.exit("Error: Prompt Required")
+        
     user_prompt = sys.argv[1]
     verbose = False
-    if len(sys.argv) > 2:
+
+    if "--verbose" in sys.argv:
         verbose = True
+    
     print("Hello from the cli-coding-agent!")
+    
     res = call_api(user_prompt)
     prompt_tokens = res.usage_metadata.prompt_token_count
     response_tokens = res.usage_metadata.candidates_token_count
+    
     if (res.function_calls):
         fn_calls = res.function_calls
         for call in fn_calls:
-            print(f"Calling function: {call.name}({call.args})")
+            result = call_function(call, verbose=verbose)
+            if result.parts[0].function_response.response:
+                print(f"-> {result.parts[0].function_response.response}")
+            else:
+                raise Exception("FATAL ERROR: No response")
+            
     if verbose:
         print(f"User prompt: {user_prompt}")
         print(f"Prompt tokens: {prompt_tokens}")
         print(f"Response tokens: {response_tokens}")
-    print(res.text)
+
 
 if __name__ == "__main__":
     main()

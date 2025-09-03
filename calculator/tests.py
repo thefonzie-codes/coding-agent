@@ -44,5 +44,9 @@ class TestCalculator(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.calculator.evaluate("+ 3")
 
+    # def countTestCases(self):
+    #     return f"Ran{super().countTestCases()} test cases"
+    
 if __name__ == "__main__":
     unittest.main()
+    
