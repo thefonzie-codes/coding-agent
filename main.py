@@ -9,7 +9,7 @@ from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
 from functions.call_function import call_function
 
-def call_api(prompt):
+def call_api(messages):
     
     system_prompt = """
     You are a helpful AI coding agent.
@@ -34,9 +34,7 @@ def call_api(prompt):
     )   
     try:
         load_dotenv()
-        messages = [
-            types.Content(role="user", parts=[types.Part(text=prompt)]),
-        ]
+
         api_key = os.environ.get("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
         res = client.models.generate_content(
@@ -47,12 +45,15 @@ def call_api(prompt):
                 tools=[available_functions]
                 ),
         )
+        for candidate in res.candidates:
+            messages.append(candidate.content)
         return res
     
     except Exception as e:
         print(f"Error during the API call: {e}")
     
 def main():
+
     
     if not sys.argv[1]:
         sys.exit("Error: Prompt Required")
@@ -60,28 +61,50 @@ def main():
     user_prompt = sys.argv[1]
     verbose = False
 
+    messages = [
+        types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+        ]
+
     if "--verbose" in sys.argv:
         verbose = True
     
     print("Hello from the cli-coding-agent!")
     
-    res = call_api(user_prompt)
-    prompt_tokens = res.usage_metadata.prompt_token_count
-    response_tokens = res.usage_metadata.candidates_token_count
-    
-    if (res.function_calls):
-        fn_calls = res.function_calls
-        for call in fn_calls:
-            result = call_function(call, verbose=verbose)
-            if result.parts[0].function_response.response:
-                print(f"-> {result.parts[0].function_response.response}")
-            else:
-                raise Exception("FATAL ERROR: No response")
+    iterations = 0
+
+    while iterations < 20:
+        try:
+            res = call_api(messages)
+            prompt_tokens = res.usage_metadata.prompt_token_count
+            response_tokens = res.usage_metadata.candidates_token_count
             
-    if verbose:
-        print(f"User prompt: {user_prompt}")
-        print(f"Prompt tokens: {prompt_tokens}")
-        print(f"Response tokens: {response_tokens}")
+            if (res.function_calls):
+                fn_calls = res.function_calls
+                for call in fn_calls:
+                    result = call_function(call, verbose=verbose)
+                    if result.parts[0].function_response.response:
+                        messages.append(f"user: {result.parts[0].function_response.response}")
+                        print(f"-> {result.parts[0].function_response.response}")
+                    else:
+                        raise Exception("FATAL ERROR: No response")
+
+            if res.text:
+                print(res.candidates[0].content)
+                return
+            else:
+                iterations += 1
+
+            if verbose:
+                print(f"User prompt: {user_prompt}")
+                print(f"Prompt tokens: {prompt_tokens}")
+                print(f"Response tokens: {response_tokens}")
+
+            print(messages)
+
+        except Exception as e:
+            print(f"Error during the API call: {e}")
+            iterations += 1
+            
 
 
 if __name__ == "__main__":
