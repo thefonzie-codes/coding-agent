@@ -38,12 +38,12 @@ def call_api(messages):
         api_key = os.environ.get("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
         res = client.models.generate_content(
-            model='gemini-2.0-flash-001', 
-            contents=f'{messages}',
+            model='gemini-2.0-flash-001',
+            contents=messages,  # not f-string
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                tools=[available_functions]
-                ),
+                tools=[available_functions],
+            ),
         )
         for candidate in res.candidates:
             messages.append(candidate.content)
@@ -82,15 +82,18 @@ def main():
                 fn_calls = res.function_calls
                 for call in fn_calls:
                     result = call_function(call, verbose=verbose)
-                    if result.parts[0].function_response.response:
-                        messages.append(f"user: {result.parts[0].function_response.response}")
-                        print(f"-> {result.parts[0].function_response.response}")
-                    else:
-                        raise Exception("FATAL ERROR: No response")
+                    messages.append(
+                        types.Content(
+                            role="user",
+                            parts=result.parts,  # preserve function_response part
+                        )
+                    )
+                    print(f"-> {result.parts[0].function_response.response}")
 
             if res.text:
-                print(res.candidates[0].content)
-                return
+                print("Final response:")
+                print(res.text)
+                break
             else:
                 iterations += 1
 
